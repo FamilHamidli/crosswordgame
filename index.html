@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kəlmə · Gündəlik Azərbaycan krossvordu</title>
+<meta name="description" content="Hər gün yeni 7×7 krossvord, Azərbaycan dilində. Pulsuz, qeydiyyatsız, telefonda və kompüterdə.">
+<meta property="og:title" content="Kəlmə · Gündəlik Azərbaycan krossvordu">
+<meta property="og:description" content="Hər gün yeni krossvord, Azərbaycan dilində.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23A3243B'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='Georgia,serif' font-weight='bold'%3EK%3C/text%3E%3C/svg%3E">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&family=Noto+Serif:wght@600;800&display=swap">
+<style>
+/* Layout: one narrow app column. Game view: header, timer+tools, 7x7 grid, active clue, keyboard, clue lists. Editor view: generator controls, preview + clue editing, word bank, schedule. */
+:root{
+  --bg:#F2F3F8; --surface:#FFFFFF; --ink:#1B1F3A; --muted:#5D6280; --line:#C9CDDD;
+  --block:#1B1F3A; --accent:#A3243B; --sel:#F5C451; --word:#DCE3F7; --ok:#2E7D4F; --bad:#C0392B; --key:#E1E4EF;
+  --f-display:"Noto Serif",Georgia,serif; --f-body:"Noto Sans",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11132A; --surface:#1C1F3F; --ink:#ECEDF6; --muted:#A4A8C6; --line:#343A66;
+  --block:#06071A; --accent:#E35B73; --sel:#C9992C; --word:#2C3566; --ok:#5CC28A; --bad:#F07A6A; --key:#2A2E55; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11132A; --surface:#1C1F3F; --ink:#ECEDF6; --muted:#A4A8C6; --line:#343A66;
+  --block:#06071A; --accent:#E35B73; --sel:#C9992C; --word:#2C3566; --ok:#5CC28A; --bad:#F07A6A; --key:#2A2E55; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 28px}
+.app{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.app.wide{max-width:900px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;gap:2px}
+h1{font-family:var(--f-display);font-weight:800;font-size:26px;margin:0;letter-spacing:-.01em}
+h1 span{color:var(--accent)}
+.meta{color:var(--muted);font-size:13px}
+.nav{display:flex;align-items:center;gap:6px}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.iconbtn{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-size:16px}
+.iconbtn:disabled{opacity:.35;cursor:default}
+.link{border:0;background:none;color:var(--accent);font-weight:700;font-size:13px;padding:6px 4px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.timer{font-variant-numeric:tabular-nums;font-weight:700;font-size:18px;letter-spacing:.02em}
+.tools{display:flex;gap:6px;flex-wrap:wrap}
+.tool{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:500}
+.tool:hover{border-color:var(--ink)}
+.tool:disabled{opacity:.45;cursor:default}
+.grid{display:grid;border:2px solid var(--block);background:var(--block);width:100%;max-width:460px;margin:0 auto;aspect-ratio:1;user-select:none;touch-action:manipulation}
+.cell{position:relative;background:var(--surface);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+  font-family:var(--f-display);font-weight:800;font-size:clamp(17px,5.6vw,28px);cursor:pointer;min-width:0}
+.cell.block{background:var(--block);border-color:var(--block);cursor:default}
+.cell.inword{background:var(--word)}
+.cell.active{background:var(--sel);color:#1B1F3A}
+.cell .num{position:absolute;top:1px;left:3px;font-family:var(--f-body);font-weight:500;font-size:clamp(8px,2.2vw,11px);color:var(--muted)}
+.cell.active .num{color:#3a3a3a}
+.cell.wrong .ch{color:var(--bad);text-decoration:line-through 2px}
+.cell.revealed::after{content:"";position:absolute;right:0;top:0;border-style:solid;border-width:0 8px 8px 0;border-color:transparent var(--accent) transparent transparent}
+.solved .cell:not(.block){color:var(--ok)}
+.clue{display:flex;align-items:stretch;background:var(--word);border-radius:10px;min-height:54px}
+.clue button{border:0;background:transparent;width:40px;font-size:18px;flex:none}
+.clue .txt{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:8px 2px;line-height:1.35}
+.tag{font-weight:700;color:var(--accent);white-space:nowrap;font-size:12px;letter-spacing:.06em}
+.kb{display:flex;flex-direction:column;gap:6px}
+.kb .row{display:flex;gap:4px;justify-content:center}
+.key{flex:1;max-width:40px;height:46px;border:0;border-radius:6px;background:var(--key);font-weight:700;font-size:16px;padding:0}
+.key.wide{max-width:64px;flex:1.6}
+.key:active{filter:brightness(.9)}
+.done{border:2px solid var(--ok);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;background:var(--surface)}
+.done h2{margin:0;font-family:var(--f-display);font-size:20px}
+.done p{margin:0;color:var(--muted);white-space:pre-line}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.primary{background:var(--accent);color:#fff;border:0;border-radius:999px;padding:8px 16px;font-weight:700}
+.primary:disabled{opacity:.5;cursor:default}
+.lists{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:480px){.lists{grid-template-columns:1fr}}
+h3{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.lists ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.lists li{display:flex;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;line-height:1.35;min-width:0}
+.lists li b{min-width:18px;font-variant-numeric:tabular-nums}
+.lists li.on{background:var(--word)}
+.lists li.full{color:var(--muted)}
+.stats{display:flex;gap:16px;color:var(--muted);font-size:13px;justify-content:center;flex-wrap:wrap}
+.stats b{color:var(--ink);font-variant-numeric:tabular-nums}
+.note{color:var(--muted);font-size:12px;text-align:center;margin:0}
+
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:no-preference){.cell{transition:background-color .12s}}
+</style>
+
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <div class="brand">
+      <h1>Kəlmə<span>.</span></h1>
+      <div class="meta" id="meta">Gündəlik krossvord</div>
+    </div>
+    <div class="nav">
+      
+      <span id="gameNav" class="nav">
+        <button class="iconbtn" id="prevP" aria-label="Əvvəlki krossvord">‹</button>
+        <button class="iconbtn" id="nextP" aria-label="Növbəti krossvord">›</button>
+      </span>
+    </div>
+  </header>
+
+  <!-- GAME -->
+  <section id="game" style="display:flex;flex-direction:column;gap:14px">
+    <div class="bar">
+      <div class="timer" id="timer">0:00</div>
+      <div class="tools">
+        <button class="tool" id="bCheck">Yoxla</button>
+        <button class="tool" id="bLetter">Hərf aç</button>
+        <button class="tool" id="bWord">Sözü aç</button>
+        <button class="tool" id="bReset">Sıfırla</button>
+      </div>
+    </div>
+    <div class="grid" id="grid" role="grid" aria-label="Krossvord şəbəkəsi"></div>
+    <div class="clue">
+      <button id="cPrev" aria-label="Əvvəlki sual">‹</button>
+      <div class="txt"><span class="tag" id="cTag"></span><span id="cTxt"></span></div>
+      <button id="cNext" aria-label="Növbəti sual">›</button>
+    </div>
+    <div class="done" id="done" hidden>
+      <h2>Təbriklər, krossvord həll olundu!</h2>
+      <p id="doneTxt"></p>
+      <div class="btnrow">
+        <button class="primary" id="bShare">Nəticəni kopyala</button>
+        <button class="tool" id="bNextDone">Başqa krossvord</button>
+      </div>
+    </div>
+    <div class="kb" id="kb"></div>
+    <div class="stats"><span>Həll edilib: <b id="sSolved">0</b></span><span>Seriya: <b id="sStreak">0</b> gün</span><span>Ən yaxşı vaxt: <b id="sBest">–</b></span></div>
+    <div class="lists">
+      <div><h3>Üfüqi</h3><ol id="lA"></ol></div>
+      <div><h3>Şaquli</h3><ol id="lD"></ol></div>
+    </div>
+    <p class="note">Hər gün yeni 7×7 krossvord. Oxlarla əvvəlki günlərə qayıda bilərsiniz. Nəticələriniz yalnız bu brauzerdə saxlanılır.</p>
+  </section>
+
+  
+</div>
+
+<script>
+const BUILTIN=[{"rows": ["T#DƏN#Y", "ƏLA#ATA", "K#MARAL", "#X#C#R#", "QAŞIQ#Y", "ANA#ADA", "B#MİN#Y"], "clues": {"DƏN": "Toxum, taxıl dənəsi", "ƏLA": "Çox yaxşı", "ATA": "Ailənin başçısı, kişi valideyn", "MARAL": "Gözəl buynuzlu meşə heyvanı", "QAŞIQ": "Şorba içmək üçün", "ANA": "Qadın valideyn", "ADA": "Hər tərəfi su ilə əhatə olunmuş quru", "MİN": "Doqquz yüz doxsan doqquzdan sonrakı ədəd", "TƏK": "Cüt olmayan", "QAB": "Boşqab, kasa, qazan", "XAN": "Şəkidə ... sarayı var", "DAM": "Evin üstü", "ŞAM": "Ad günü tortunun üstünə qoyulur", "ACI": "Bibərin dadı", "NAR": "Göyçayın məşhur dənəli meyvəsi", "QAN": "Damarlarda axan", "TAR": "Azərbaycanın milli simli aləti", "YAL": "Atın boynundakı uzun tüklər", "YAY": "İlin ən isti fəsli"}}, {"rows": ["NAĞARA#", "#R##O#A", "QIZ#MİN", "U#U#A#A", "BİR#NAR", "A#N##Y#", "#YASTIQ"], "clues": {"NAĞARA": "İri zərb aləti", "QIZ": "Oğlan olmayan uşaq", "MİN": "Doqquz yüz doxsan doqquzdan sonrakı ədəd", "BİR": "Ən kiçik natural ədəd", "NAR": "Göyçayın məşhur dənəli meyvəsi", "YASTIQ": "Başın altına qoyulur", "QUBA": "Alması ilə məşhur bölgə", "ARI": "Bal verən həşərat", "ZURNA": "Toylarda çalınan nəfəsli alət", "ROMAN": "Böyük həcmli bədii əsər", "AYI": "Qışı yuxuda keçirən iri meşə heyvanı", "ANAR": "Dənəli qırmızı meyvə, həm də kişi adı"}}, {"rows": ["QAŞIQ#İ", "O###A#L", "ÇAY#TƏK", "#NAĞIL#", "YAĞ#QAŞ", "Ü#I###İ", "Z#ŞƏHƏR"], "clues": {"QAŞIQ": "Şorba içmək üçün", "ÇAY": "Armudu stəkanda içilən isti içki", "TƏK": "Cüt olmayan", "NAĞIL": "\"Biri vardı, biri yoxdu\" ilə başlayır", "YAĞ": "Kərə ... və ya zeytun ...", "QAŞ": "Gözün üstündəki tüklər", "ŞƏHƏR": "Böyük yaşayış məntəqəsi", "QOÇ": "Buynuzlu erkək qoyun", "YÜZ": "Doxsan doqquzdan sonrakı ədəd", "ANA": "Qadın valideyn", "YAĞIŞ": "Buluddan düşən su damcıları", "QATIQ": "Mayalanmış süd", "ƏLA": "Çox yaxşı", "İLK": "Birinci", "ŞİR": "Yalı olan yırtıcı, heyvanlar şahı"}}, {"rows": ["Q#ALMAZ", "U#Ş##T#", "TOP#YAŞ", "A#A#A#O", "BUZ#TAR", "#L##A#B", "BUDAQ#A"], "clues": {"ALMAZ": "Təbiətdə ən bərk qiymətli daş", "TOP": "Futbolda qapıya vurulan", "YAŞ": "Ömür illəri", "BUZ": "Donmuş su", "TAR": "Azərbaycanın milli simli aləti", "BUDAQ": "Ağacın qolu", "QUTAB": "Göyərti və ya ətlə doldurulmuş nazik xörək", "ULU": "Böyük, müqəddəs, qədim", "AŞPAZ": "Yemək bişirən peşə sahibi", "YATAQ": "Yatmaq üçün yer", "ATA": "Ailənin başçısı, kişi valideyn", "ŞORBA": "Duru isti xörək"}}, {"rows": ["QAZ#ŞAM", "#TOY##A", "BAĞ#P#R", "Ə#ADA#A", "R#L#PUL", "D##ŞAL#", "ƏMİ#QUM"], "clues": {"QAZ": "Qaqqıldayan ev quşu", "ŞAM": "Ad günü tortunun üstünə qoyulur", "TOY": "Evlilik şənliyi", "BAĞ": "Meyvə ağacları əkilmiş yer", "ADA": "Hər tərəfi su ilə əhatə olunmuş quru", "PUL": "Manat və qəpik", "ŞAL": "Çiyinə atılan yun örtük", "ƏMİ": "Atanın qardaşı", "QUM": "Çimərlikdə ayaq altında olan", "BƏRDƏ": "Qədim Aran paytaxtı", "ATA": "Ailənin başçısı, kişi valideyn", "ZOĞAL": "Qırmızı turş meyvə", "PAPAQ": "Başa qoyulan baş geyimi", "ULU": "Böyük, müqəddəs, qədim", "MARAL": "Gözəl buynuzlu meşə heyvanı"}}, {"rows": ["##QATIQ", "T#A#E#A", "O#BAZAR", "R##T##P", "PAPAQ#I", "A#U#U#Z", "QƏLƏM##"], "clues": {"QATIQ": "Mayalanmış süd", "BAZAR": "Alış-veriş yeri", "PAPAQ": "Başa qoyulan baş geyimi", "QƏLƏM": "Yazı aləti", "TORPAQ": "Yer, bitkilərin bitdiyi qat", "QAB": "Boşqab, kasa, qazan", "PUL": "Manat və qəpik", "ATA": "Ailənin başçısı, kişi valideyn", "TEZ": "Gec olmayan", "QUM": "Çimərlikdə ayaq altında olan", "QARPIZ": "İçi qırmızı, iri bostan meyvəsi"}}, {"rows": ["#SƏMA##", "GÜL#YAY", "#DAYI#A", "M##A##Z", "İ#AĞAC#", "SON#TAR", "##ARAN#"], "clues": {"SƏMA": "Göy üzü", "GÜL": "Bağçanın ətirli çiçəyi", "YAY": "İlin ən isti fəsli", "DAYI": "Ananın qardaşı", "AĞAC": "Gövdəsi və budaqları olan bitki", "SON": "Axır", "TAR": "Azərbaycanın milli simli aləti", "ARAN": "Kür-Araz ovalığını əhatə edən bölgə", "MİS": "Qırmızımtıl metal", "SÜD": "İnəyin verdiyi ağ içki", "ƏLA": "Çox yaxşı", "ANA": "Qadın valideyn", "YAĞ": "Kərə ... və ya zeytun ...", "AYI": "Qışı yuxuda keçirən iri meşə heyvanı", "ATA": "Ailənin başçısı, kişi valideyn", "CAN": "Ruh, həyat", "YAZ": "Novruzla gələn fəsil"}}, {"rows": ["BADAM#D", "İ#A#İKİ", "ROMAN#L", "###T###", "D#QAŞIQ", "ACI#A#A", "Ş#ŞƏHƏR"], "clues": {"BADAM": "Şəkərburanın içinə qoyulan qoz-fındıq", "İKİ": "Birdən sonrakı rəqəm", "ROMAN": "Böyük həcmli bədii əsər", "QAŞIQ": "Şorba içmək üçün", "ACI": "Bibərin dadı", "ŞƏHƏR": "Böyük yaşayış məntəqəsi", "BİR": "Ən kiçik natural ədəd", "DAŞ": "Bərk təbii material, qaya parçası", "DAM": "Evin üstü", "QIŞ": "İlin ən soyuq fəsli", "ATA": "Ailənin başçısı, kişi valideyn", "MİN": "Doqquz yüz doxsan doqquzdan sonrakı ədəd", "ŞAH": "Şahmatda əsas fiqur", "DİL": "Danışdığımız ... Azərbaycan dilidir", "QAR": "Qışda yağan ağ dənəciklər"}}];
+const PATTERNS=[
+[".#...#.","...#...",".#.....","#.#.#.#",".....#.","...#...",".#...#."],
+["......#","#.##.#.","...#...",".#.#.#.","...#...",".#.##.#","#......"],
+[".....#.",".###.#.","...#...","#.....#","...#...",".#.###.",".#....."],
+[".#.....",".#.##.#","...#...",".#.#.#.","...#...","#.##.#.",".....#."],
+["...#...","#...##.","...#.#.",".#...#.",".#.#...",".##...#","...#..."],
+["##.....",".#.#.#.",".#.....",".##.##.",".....#.",".#.#.#.",".....##"],
+["#....##","...#...","#....#.",".##.##.",".#....#","...#...","##....#"],
+[".....#.",".#.#...",".....#.","###.###",".#.....","...#.#.",".#....."]
+];
+const KEYS=[["Q","Ü","E","R","T","Y","U","İ","O","P","Ö","Ğ"],["A","S","D","F","G","H","J","K","L","I","Ə"],["Z","X","C","V","B","N","M","Ç","Ş","⌫"]];
+const LETTERS=new Set(KEYS.flat().filter(k=>k!=="⌫"));
+const S={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const $=id=>document.getElementById(id);
+const MONTHS=["yanvar","fevral","mart","aprel","may","iyun","iyul","avqust","sentyabr","oktyabr","noyabr","dekabr"];
+
+// ---------- dates ----------
+const EPOCH=Date.UTC(2026,9,1);
+const pad=n=>String(n).padStart(2,"0");
+function todayIdx(){const n=new Date();return Math.round((Date.UTC(n.getFullYear(),n.getMonth(),n.getDate())-EPOCH)/864e5)}
+const dayToISO=d=>{const t=new Date(EPOCH+d*864e5);return `${t.getUTCFullYear()}-${pad(t.getUTCMonth()+1)}-${pad(t.getUTCDate())}`};
+const isoToDay=s=>{const [y,m,d]=s.split("-").map(Number);return Math.round((Date.UTC(y,m-1,d)-EPOCH)/864e5)};
+const fmtDate=d=>{const t=new Date(EPOCH+d*864e5);return `${t.getUTCDate()} ${MONTHS[t.getUTCMonth()]} ${t.getUTCFullYear()}`};
+const TODAY=todayIdx();
+
+// ---------- shared state ----------
+let db=null, isEditor=false, scheduled={}; // iso -> {rows,clues}
+let customLines=[];
+
+function validPuzzle(p){return p&&Array.isArray(p.rows)&&p.rows.length>=3&&p.rows.every(r=>typeof r==="string"&&[...r].length===p.rows.length)&&p.clues&&typeof p.clues==="object"}
+function puzzleFor(day){const s=scheduled[dayToISO(day)];if(validPuzzle(s))return {rows:s.rows,clues:s.clues,src:"db"};
+  const b=BUILTIN[((day%BUILTIN.length)+BUILTIN.length)%BUILTIN.length];return {...b,src:"builtin"}}
+
+// ---------- grid geometry ----------
+function analyze(rows){
+  const g=rows.map(r=>[...r]);const N=g.length;
+  const isB=(r,c)=>r<0||c<0||r>=N||c>=N||g[r][c]==="#";
+  const words=[],nums={};let n=0;
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){if(isB(r,c))continue;
+    const a=isB(r,c-1)&&!isB(r,c+1)&&!isB(r,c+2), d=isB(r-1,c)&&!isB(r+1,c)&&!isB(r+2,c);
+    const a2=isB(r,c-1)&&!isB(r,c+1), d2=isB(r-1,c)&&!isB(r+1,c);
+    if(a2||d2){n++;nums[r+","+c]=n}
+    if(a2){const cells=[];let x=c;while(!isB(r,x)){cells.push([r,x]);x++}words.push({dir:"A",n,cells,ans:cells.map(([y,x])=>g[y][x]).join("")})}
+    if(d2){const cells=[];let y=r;while(!isB(y,c)){cells.push([y,c]);y++}words.push({dir:"D",n,cells,ans:cells.map(([y,x])=>g[y][x]).join("")})}
+  }
+  return {g,N,isB,words,nums};
+}
+
+// ================= GAME =================
+let day=TODAY,P,fill,revealed,wrong,cur={r:0,c:0,dir:"A"},secs=0,tick=null,solved=false,pkey="";
+const sig=rows=>rows.join("").split("").reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7).toString(36);
+
+function build(){
+  const pz=puzzleFor(day);
+  P=analyze(pz.rows);P.words.forEach(w=>w.clue=pz.clues[w.ans]||"");
+  pkey="kelme7-"+day+"-"+sig(pz.rows);
+  const saved=S.get(pkey,null);
+  fill=saved?saved.fill:P.g.map(r=>r.map(ch=>ch==="#"?"#":""));
+  revealed=saved?saved.rev:P.g.map(r=>r.map(()=>false));
+  secs=saved?saved.secs:0;solved=saved?!!saved.solved:false;
+  wrong=P.g.map(r=>r.map(()=>false));
+  const first=P.words.find(w=>w.dir==="A")||P.words[0];cur={r:first.cells[0][0],c:first.cells[0][1],dir:first.dir};
+  renderGrid();renderLists();update();header();startTimer();
+}
+function header(){
+  $("meta").textContent=`№ ${day+1} · ${fmtDate(day)}`+(day===TODAY?" · bugün":day>TODAY?" · gələcək":"");
+  $("nextP").disabled=day>=TODAY&&!isEditor;$("prevP").disabled=day<=0;
+}
+function save(){S.set(pkey,{fill,rev:revealed,secs,solved})}
+function renderGrid(){
+  const el=$("grid");el.style.gridTemplateColumns=`repeat(${P.N},1fr)`;el.innerHTML="";
+  for(let r=0;r<P.N;r++)for(let c=0;c<P.N;c++){
+    const d=document.createElement("div");d.className="cell"+(P.isB(r,c)?" block":"");d.dataset.r=r;d.dataset.c=c;
+    if(!P.isB(r,c)){d.setAttribute("role","gridcell");const k=P.nums[r+","+c];
+      if(k){const s=document.createElement("span");s.className="num";s.textContent=k;d.appendChild(s)}
+      const ch=document.createElement("span");ch.className="ch";d.appendChild(ch);
+      d.addEventListener("click",()=>{if(cur.r===r&&cur.c===c)toggleDir();else{cur.r=r;cur.c=c;if(!wordAt(r,c,cur.dir))toggleDir()}update()})}
+    el.appendChild(d)}
+}
+function renderLists(){
+  for(const [dir,id] of [["A","lA"],["D","lD"]]){const ol=$(id);ol.innerHTML="";
+    P.words.filter(w=>w.dir===dir).forEach(w=>{const li=document.createElement("li");
+      const b=document.createElement("b");b.textContent=w.n;const s=document.createElement("span");s.textContent=w.clue;li.append(b,s);
+      li.addEventListener("click",()=>{cur={r:w.cells[0][0],c:w.cells[0][1],dir};const e=w.cells.find(([y,x])=>!fill[y][x]);if(e){cur.r=e[0];cur.c=e[1]}update()});
+      w.li=li;ol.appendChild(li)})}
+}
+const wordAt=(r,c,dir)=>P.words.find(w=>w.dir===dir&&w.cells.some(([y,x])=>y===r&&x===c));
+function toggleDir(){const o=cur.dir==="A"?"D":"A";if(wordAt(cur.r,cur.c,o))cur.dir=o}
+function curWord(){return wordAt(cur.r,cur.c,cur.dir)||(toggleDir(),wordAt(cur.r,cur.c,cur.dir))}
+function update(){
+  const w=curWord();
+  document.querySelectorAll("#grid .cell").forEach(el=>{const r=+el.dataset.r,c=+el.dataset.c;if(P.isB(r,c))return;
+    el.querySelector(".ch").textContent=fill[r][c];
+    el.classList.toggle("active",r===cur.r&&c===cur.c);
+    el.classList.toggle("inword",w.cells.some(([y,x])=>y===r&&x===c));
+    el.classList.toggle("wrong",wrong[r][c]&&fill[r][c]!=="");
+    el.classList.toggle("revealed",revealed[r][c])});
+  $("cTag").textContent=w.n+(w.dir==="A"?" ÜFÜQİ":" ŞAQULİ");$("cTxt").textContent=w.clue;
+  P.words.forEach(x=>{x.li.classList.toggle("on",x===w);x.li.classList.toggle("full",x.cells.every(([y,z])=>fill[y][z]))});
+  $("grid").classList.toggle("solved",solved);$("done").hidden=!solved;
+  if(solved)$("doneTxt").textContent=`Vaxtınız: ${fmt(secs)}`+(revealed.flat().some(Boolean)?" (ipucu ilə)":" (ipucusuz)");
+  $("timer").textContent=fmt(secs);stats();
+}
+const fmt=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+function startTimer(){clearInterval(tick);tick=setInterval(()=>{if(solved||document.hidden||$("game").hidden)return;secs++;$("timer").textContent=fmt(secs);if(secs%5===0)save()},1000)}
+function move(step){const w=curWord();const i=w.cells.findIndex(([y,x])=>y===cur.r&&x===cur.c);const j=i+step;if(j>=0&&j<w.cells.length){cur.r=w.cells[j][0];cur.c=w.cells[j][1]}}
+function nextWord(step){const w=curWord();const i=P.words.indexOf(w);const nw=P.words[(i+step+P.words.length)%P.words.length];
+  cur={r:nw.cells[0][0],c:nw.cells[0][1],dir:nw.dir};const e=nw.cells.find(([y,x])=>!fill[y][x]);if(e){cur.r=e[0];cur.c=e[1]}update()}
+function type(ch){if(solved)return;
+  if(ch==="⌫"){if(!fill[cur.r][cur.c]||revealed[cur.r][cur.c])move(-1);if(!revealed[cur.r][cur.c]){fill[cur.r][cur.c]="";wrong[cur.r][cur.c]=false}update();save();return}
+  if(revealed[cur.r][cur.c]){move(1);update();return}
+  fill[cur.r][cur.c]=ch;wrong[cur.r][cur.c]=false;
+  const w=curWord();const i=w.cells.findIndex(([y,x])=>y===cur.r&&x===cur.c);
+  if(i===w.cells.length-1){const nxt=w.cells.find(([y,x])=>!fill[y][x]);if(nxt){cur.r=nxt[0];cur.c=nxt[1]}else nextWord(1)}else move(1);
+  checkSolved();update();save()}
+function checkSolved(){if(P.g.every((row,r)=>row.every((ch,c)=>ch==="#"||fill[r][c]===ch))){solved=true;save();record()}}
+function record(){const st=S.get("kelme-stats",{done:[],best:null});if(!st.done.includes(day))st.done.push(day);
+  if(!revealed.flat().some(Boolean)&&(st.best===null||secs<st.best))st.best=secs;S.set("kelme-stats",st)}
+function stats(){const st=S.get("kelme-stats",{done:[],best:null});$("sSolved").textContent=st.done.length;
+  let k=0,d=st.done.includes(TODAY)?TODAY:TODAY-1;while(st.done.includes(d)){k++;d--}
+  $("sStreak").textContent=k;$("sBest").textContent=st.best===null?"–":fmt(st.best)}
+$("bCheck").onclick=()=>{P.g.forEach((row,r)=>row.forEach((ch,c)=>{if(ch!=="#"&&fill[r][c]&&fill[r][c]!==ch)wrong[r][c]=true}));update()};
+function reveal(cells){cells.forEach(([r,c])=>{if(fill[r][c]!==P.g[r][c]){fill[r][c]=P.g[r][c];revealed[r][c]=true;wrong[r][c]=false}});checkSolved();update();save()}
+$("bLetter").onclick=()=>{if(!solved)reveal([[cur.r,cur.c]])};
+$("bWord").onclick=()=>{if(!solved)reveal(curWord().cells)};
+function armed(btn,label,fn){if(btn.dataset.armed){delete btn.dataset.armed;btn.textContent=label;fn();return}
+  btn.dataset.armed="1";btn.textContent="Əminsiniz?";setTimeout(()=>{if(btn.dataset.armed){delete btn.dataset.armed;btn.textContent=label}},2500)}
+$("bReset").onclick=e=>armed(e.currentTarget,"Sıfırla",()=>{S.del(pkey);const st=S.get("kelme-stats",{done:[],best:null});st.done=st.done.filter(x=>x!==day);S.set("kelme-stats",st);build()});
+$("cPrev").onclick=()=>nextWord(-1);$("cNext").onclick=()=>nextWord(1);
+function go(d){save();day=d;build()}
+$("prevP").onclick=()=>{if(day>0)go(day-1)};
+$("nextP").onclick=()=>{if(day<TODAY||isEditor)go(day+1)};
+$("bNextDone").onclick=()=>go(day<TODAY?day+1:Math.max(0,day-1));
+$("bShare").onclick=e=>{const b=e.currentTarget;
+  const txt=`Kəlmə № ${day+1} — ${fmt(secs)}${revealed.flat().some(Boolean)?" (ipucu ilə)":" ✅"}\n`+P.g.map(row=>row.map(ch=>ch==="#"?"⬛":"🟩").join("")).join("\n");
+  const ok=()=>{b.textContent="Kopyalandı";setTimeout(()=>b.textContent="Nəticəni kopyala",1800)};
+  const fail=()=>{$("doneTxt").textContent=txt};
+  try{navigator.clipboard.writeText(txt).then(ok,fail)}catch(_){fail()}};
+KEYS.forEach(row=>{const r=document.createElement("div");r.className="row";row.forEach(k=>{const b=document.createElement("button");b.className="key"+(k==="⌫"?" wide":"");b.textContent=k;b.setAttribute("aria-label",k==="⌫"?"Sil":k);b.addEventListener("click",()=>type(k));r.appendChild(b)});$("kb").appendChild(r)});
+document.addEventListener("keydown",e=>{
+  if($("game").hidden||e.metaKey||e.ctrlKey||e.altKey)return;
+  const t=e.target;if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"))return;
+  const k=e.key;
+  if(k==="Backspace"){e.preventDefault();type("⌫");return}
+  if(k==="Tab"){e.preventDefault();nextWord(e.shiftKey?-1:1);return}
+  if(k===" "){e.preventDefault();toggleDir();update();return}
+  const arrows={ArrowLeft:[0,-1,"A"],ArrowRight:[0,1,"A"],ArrowUp:[-1,0,"D"],ArrowDown:[1,0,"D"]};
+  if(arrows[k]){e.preventDefault();const [dr,dc,dir]=arrows[k];
+    if(cur.dir!==dir&&wordAt(cur.r,cur.c,dir)){cur.dir=dir}else{let r=cur.r+dr,c=cur.c+dc;while(r>=0&&c>=0&&r<P.N&&c<P.N&&P.isB(r,c)){r+=dr;c+=dc}
+      if(r>=0&&c>=0&&r<P.N&&c<P.N){cur.r=r;cur.c=c;if(!wordAt(r,c,cur.dir))toggleDir()}}update();return}
+  if(k.length===1){const ch=k==="i"?"İ":k==="ı"?"I":(k==="w"||k==="W")?"Ə":k.toLocaleUpperCase("az");if(LETTERS.has(ch)){e.preventDefault();type(ch)}}
+});
+
+
+build();
+fetch("puzzles.json",{cache:"no-cache"}).then(r=>r.ok?r.json():null).then(j=>{
+  if(!j||!j.puzzles)return;const next={};
+  for(const k in j.puzzles){if(/^\d{4}-\d{2}-\d{2}$/.test(k)&&validPuzzle(j.puzzles[k]))next[k]=j.puzzles[k]}
+  const before=JSON.stringify(scheduled[dayToISO(day)]||null);scheduled=next;
+  if(JSON.stringify(scheduled[dayToISO(day)]||null)!==before)build();
+}).catch(()=>{});
+</script>
+
+</body>
+</html>
